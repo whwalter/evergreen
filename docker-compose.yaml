@@ -1,0 +1,17 @@
+
+services:
+
+  evergreen:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      - mongo
+    environment:
+      - MONGO_URL=mongodb://{DOCKER_IP}:27017
+
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
