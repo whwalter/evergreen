@@ -230,7 +230,11 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	const dbURI = "mongodb://localhost:27017"
+	const defaultDbURI = "mongodb://localhost:27017"
+	dbURI := defaultDbURI
+	if len(os.Getenv(evergreen.MongodbUrl)) > 0 {
+		dbURI = os.Getenv(evergreen.MongodbUrl)
+	}
 
 	clientOptions := options.Client().ApplyURI(dbURI).SetConnectTimeout(5 * time.Second)
 	envAuth := os.Getenv(evergreen.MongodbAuthFile)

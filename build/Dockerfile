@@ -1,17 +1,23 @@
+# syntax=docker/dockerfile:1
 
 # Make a build env with everything we need
-FROM debian:bookworm as build
+FROM public.ecr.aws/debian/debian:bookworm as build
 
-ENV GOVER="1.20.7"
-ENV GOOS="linux"
-ENV GOARCH="arm64"
+
+ARG GIT_HASH
+ARG GOOS
+ARG GOARCH
+ARG GOVERSION
+
 
 
 RUN apt update && apt upgrade -y && \
-    apt install -y git make
+    apt install -y git make jq vim
 
-ADD https://go.dev/dl/go${GOVER}.${GOOS}-${GOARCH}.tar.gz /tmp/go${GOVER}.${GOOS}-${GOARCH}.tar.gz
-RUN tar -C /usr/local -xzf /tmp/go${GOVER}.${GOOS}-${GOARCH}.tar.gz
+# Grab golang directly from Google
+#  TODO: Can we pull this from Artifactory?
+ADD https://go.dev/dl/go${GOVERSION}.${GOOS}-${GOARCH}.tar.gz /tmp/go${GOVERSION}.${GOOS}-${GOARCH}.tar.gz
+RUN tar -C /usr/local -xzf /tmp/go${GOVERSION}.${GOOS}-${GOARCH}.tar.gz
 ENV PATH="/usr/local/go/bin:${PATH}"
 
 WORKDIR /build
@@ -19,22 +25,40 @@ WORKDIR /build
 # Install bom so we can build an SBOM
 RUN go install sigs.k8s.io/bom/cmd/bom@latest
 
-COPY . /build
-RUN make
+# Copy this repo to the WORKDIR and run make
+COPY . .
+RUN make build
 
 # Capture the build artifact information in an SBOM file
 RUN /root/go/bin/bom generate --format json --name evergreen --output evergreen.spdx.json . && \
     install -D -m 444 evergreen.spdx.json /var/lib/db/sbom/evergreen.spdx.json
 
 
-# Make the runtime environment
-FROM debian:bookworm-slim as runtime
+# Create a dev container with the entire build environment
+FROM build AS dev
+CMD ["/bin/bash"]
 
-ENV GOOS="linux"
-ENV GOARCH="arm64"
+# Create a dev container with the entire build environment
+FROM build AS local-evergreen
+
+ARG GOOS
+ARG GOARCH
+
+WORKDIR /build
+CMD ["/bin/bash", "-c", "/build/build/start-local-evergreen.sh"]
+
+
+
+# Production is as slim as possible
+FROM public.ecr.aws/debian/debian:bookworm-slim as production
+
+ARG GIT_HASH
+ARG GOOS
+ARG GOARCH
+ARG GOVERSION
 
 WORKDIR /app
 COPY --from=build /build/clients/${GOOS}_${GOARCH}/evergreen .
 COPY --from=build /var/lib/db/sbom/evergreen.spdx.json /var/lib/db/sbom/evergreen.spdx.json
 
-CMD ["/app/evergreen", "service", "web"]
+CMD ["/bin/sh", "-c", "/app/evergreen", "service", "web", "--url", "${EVG_DB_URL}"]
