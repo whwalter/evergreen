@@ -27,6 +27,10 @@ steps:
         from_secret: ecr_access_key
       secret_key:
         from_secret: ecr_secret_key
+      build_args:
+        - GOOS=linux
+        - GOARCH=arm64
+        - GOVERSION=1.20.7
     when:
       event:
         - push
