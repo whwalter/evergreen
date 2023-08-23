@@ -52,10 +52,11 @@ CMD ["/bin/bash", "-c", "/build/build/start-local-evergreen.sh"]
 # Production is as slim as possible
 FROM public.ecr.aws/debian/debian:bookworm-slim as production
 
-ARG GIT_HASH
 ARG GOOS
 ARG GOARCH
-ARG GOVERSION
+
+# Get this image up to date
+RUN apt update && apt upgrade -y && rm -rf /var/cache/apt
 
 WORKDIR /app
 COPY --from=build /build/clients/${GOOS}_${GOARCH}/evergreen .
