@@ -23,13 +23,14 @@ steps:
       tags:
         - git-${DRONE_COMMIT_SHA:0:7}
         - latest
+        - ${DRONE_STAGE_ARCH}-latest
       access_key:
         from_secret: ecr_access_key
       secret_key:
         from_secret: ecr_secret_key
       build_args:
-        - GOOS=linux
-        - GOARCH=arm64
+        - GOOS=${DRONE_STAGE_OS}
+        - GOARCH=${DRONE_STAGE_ARCH}
         - GOVERSION=1.20.7
     when:
       event:

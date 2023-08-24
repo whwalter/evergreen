@@ -20,8 +20,8 @@ docker buildx build --platform=linux/arm64 \
     --build-arg GOARCH="arm64" \
     --build-arg GOVERSION="1.20.7" \
     --label "git-${GIT_HASH}" \
-    --tag local-evergreen:latest \
-    --tag local-evergreen:${GIT_HASH} \
-    --target local-evergreen \
+    --tag evergreen:latest \
+    --tag evergreen:${GIT_HASH} \
+    --target production \
     -f build/Dockerfile \
     .

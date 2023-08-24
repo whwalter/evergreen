@@ -3,13 +3,10 @@
 # Make a build env with everything we need
 FROM public.ecr.aws/debian/debian:bookworm as build
 
-
 ARG GIT_HASH
 ARG GOOS
 ARG GOARCH
 ARG GOVERSION
-
-
 
 RUN apt update && apt upgrade -y && \
     apt install -y git make jq vim
@@ -50,16 +47,14 @@ CMD ["/bin/bash", "-c", "/build/build/start-local-evergreen.sh"]
 
 
 # Production is as slim as possible
-FROM public.ecr.aws/debian/debian:bookworm-slim as production
+#FROM public.ecr.aws/debian/debian:bookworm-slim as production
+FROM scratch as production
 
 ARG GOOS
 ARG GOARCH
-
-# Get this image up to date
-RUN apt update && apt upgrade -y && rm -rf /var/cache/apt
 
 WORKDIR /app
 COPY --from=build /build/clients/${GOOS}_${GOARCH}/evergreen .
 COPY --from=build /var/lib/db/sbom/evergreen.spdx.json /var/lib/db/sbom/evergreen.spdx.json
 
-CMD ["/bin/sh", "-c", "/app/evergreen", "service", "web", "--url", "${EVG_DB_URL}"]
+ENTRYPOINT ["/app/evergreen", "service", "web"]
