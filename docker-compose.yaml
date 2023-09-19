@@ -15,10 +15,22 @@ services:
     depends_on:
       - mongo
     environment:
-      - MONGO_URL=mongodb://mongo:27017
-      - EVG_DB_URL=mongodb://mongo:27017
+      - MONGO_URL=mongodb://localhost:27017
+      - EVG_DB_URL=mongodb://localhost:27017
+    network_mode: "host"
 
   mongo:
     image: mongo:latest
     ports:
       - "27017:27017"
+
+  ui:
+    build:
+      context: .
+      dockerfile: build/Dockerfile
+      target: ui
+    depends_on:
+      - evergreen
+    network_mode: "host"
+    ports:
+      - "3000:3000"

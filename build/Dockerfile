@@ -47,8 +47,8 @@ CMD ["/bin/bash", "-c", "/build/build/start-local-evergreen.sh"]
 
 
 # Production is as slim as possible
-#FROM public.ecr.aws/debian/debian:bookworm-slim as production
-FROM scratch as production
+FROM public.ecr.aws/debian/debian:bookworm-slim as production
+#FROM scratch as production
 
 ARG GOOS
 ARG GOARCH
@@ -58,3 +58,20 @@ COPY --from=build /build/clients/${GOOS}_${GOARCH}/evergreen .
 COPY --from=build /var/lib/db/sbom/evergreen.spdx.json /var/lib/db/sbom/evergreen.spdx.json
 
 ENTRYPOINT ["/app/evergreen", "service", "web"]
+
+
+# UI
+FROM node:20-bookworm as ui
+
+ARG GIT_HASH
+ARG GOOS
+ARG GOARCH
+ARG GOVERSION
+
+WORKDIR /build
+RUN git clone https://github.com/evergreen-ci/spruce.git .
+RUN yarn
+
+CMD ["yarn", "run", "dev"]
+
+
