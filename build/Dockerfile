@@ -73,5 +73,3 @@ RUN git clone https://github.com/evergreen-ci/spruce.git .
 RUN yarn
 
 CMD ["yarn", "run", "dev"]
-
-
