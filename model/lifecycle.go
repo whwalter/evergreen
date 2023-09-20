@@ -262,50 +262,38 @@ func SetTaskPriority(ctx context.Context, t task.Task, priority int64, caller st
 
 // SetBuildPriority updates the priority field of all tasks associated with the given build id.
 func SetBuildPriority(ctx context.Context, buildId string, priority int64, caller string) error {
-	_, err := task.UpdateAll(
-		bson.M{task.BuildIdKey: buildId},
-		bson.M{"$set": bson.M{task.PriorityKey: priority}},
-	)
-	if err != nil {
-		return errors.Wrapf(err, "setting priority for build '%s'", buildId)
-	}
-
-	// negative priority - these tasks should never run, so unschedule now
-	if priority < 0 {
-		tasks, err := task.FindAll(db.Query(bson.M{task.BuildIdKey: buildId}))
-		if err != nil {
-			return errors.Wrapf(err, "getting tasks for build '%s'", buildId)
-		}
-		if err = SetActiveState(ctx, caller, false, tasks...); err != nil {
-			return errors.Wrapf(err, "deactivating tasks for build '%s'", buildId)
-		}
-	}
-
-	return nil
+	query := bson.M{task.BuildIdKey: buildId}
+	return errors.Wrap(setTasksPriority(ctx, query, priority, caller), "setting priority for build")
 }
 
 // SetVersionsPriority updates the priority field of all tasks and child tasks associated with the given version ids.
 func SetVersionsPriority(ctx context.Context, versionIds []string, priority int64, caller string) error {
 	query := task.ByVersionsWithChildTasks(versionIds)
+	return errors.Wrap(setTasksPriority(ctx, query, priority, caller), "setting priority for versions")
+}
+
+func setTasksPriority(ctx context.Context, query bson.M, priority int64, caller string) error {
 	_, err := task.UpdateAll(query,
 		bson.M{"$set": bson.M{task.PriorityKey: priority}},
 	)
 	if err != nil {
-		return errors.Wrap(err, "setting priority for versions")
+		return errors.Wrap(err, "setting priority")
+	}
+	tasks, err := task.FindAll(db.Query(query))
+	if err != nil {
+		return errors.Wrap(err, "getting tasks")
+	}
+	var taskIds []string
+	for _, t := range tasks {
+		taskIds = append(taskIds, t.Id)
+	}
+	event.LogManyTaskPriority(taskIds, caller, priority)
+
+	// Tasks with negative priority should never run, so we unschedule them.
+	if priority < 0 {
+		return errors.Wrap(SetActiveState(ctx, caller, false, tasks...), "deactivating tasks")
 	}
 
-	// negative priority - these tasks should never run, so unschedule now
-	if priority < 0 {
-		var tasks []task.Task
-		tasks, err = task.FindAll(db.Query(query))
-		if err != nil {
-			return errors.Wrap(err, "getting tasks for versions")
-		}
-		err = SetActiveState(ctx, caller, false, tasks...)
-		if err != nil {
-			return errors.Wrap(err, "deactivating tasks for versions")
-		}
-	}
 	return nil
 }
 
@@ -578,7 +566,9 @@ func addTasksToBuild(ctx context.Context, creationInfo TaskCreationInfo) (*build
 		if !utility.StringSliceContains(tasksWithActivationTime, t.DisplayName) {
 			continue
 		}
-		activateTaskAt, err := creationInfo.ProjectRef.GetActivationTimeForTask(creationInfo.Project.FindTaskForVariant(t.DisplayName, creationInfo.Build.BuildVariant))
+		activateTaskAt, err := creationInfo.ProjectRef.GetActivationTimeForTask(
+			creationInfo.Project.FindTaskForVariant(t.DisplayName, creationInfo.Build.BuildVariant),
+			t.Id)
 		batchTimeCatcher.Wrapf(err, "getting activation time for task '%s'", t.DisplayName)
 		batchTimeTaskStatuses = append(batchTimeTaskStatuses, BatchTimeTaskStatus{
 			TaskName: t.DisplayName,
@@ -1639,7 +1629,8 @@ func addNewBuilds(ctx context.Context, creationInfo TaskCreationInfo, existingBu
 			batchTimeCatcher.Wrapf(err, "getting activation time for variant '%s'", pair.Variant)
 		}
 		for taskName, id := range batchTimeTasksToIds {
-			activateTaskAt, err := creationInfo.ProjectRef.GetActivationTimeForTask(creationInfo.Project.FindTaskForVariant(taskName, pair.Variant))
+			activateTaskAt, err := creationInfo.ProjectRef.GetActivationTimeForTask(
+				creationInfo.Project.FindTaskForVariant(taskName, pair.Variant), id)
 			batchTimeCatcher.Wrapf(err, "getting activation time for task '%s' in variant '%s'", taskName, pair.Variant)
 			batchTimeTaskStatuses = append(batchTimeTaskStatuses, BatchTimeTaskStatus{
 				TaskId:   id,
@@ -1681,7 +1672,7 @@ func addNewBuilds(ctx context.Context, creationInfo TaskCreationInfo, existingBu
 
 // Given a version and set of variant/task pairs, creates any tasks that don't exist yet,
 // within the set of already existing builds. Returns activated task IDs.
-func addNewTasks(ctx context.Context, creationInfo TaskCreationInfo, existingBuilds []build.Build) ([]string, error) {
+func addNewTasks(ctx context.Context, creationInfo TaskCreationInfo, existingBuilds []build.Build, caller string) ([]string, error) {
 	ctx, span := tracer.Start(ctx, "add-new-tasks")
 	defer span.End()
 	if creationInfo.Version.BuildIds == nil {
@@ -1767,7 +1758,7 @@ func addNewTasks(ctx context.Context, creationInfo TaskCreationInfo, existingBui
 		}
 	}
 	if len(buildIdsToActivate) > 0 {
-		if err := build.UpdateActivation(buildIdsToActivate, true, evergreen.DefaultTaskActivator); err != nil {
+		if err := build.UpdateActivation(buildIdsToActivate, true, caller); err != nil {
 			return nil, err
 		}
 	}
@@ -1794,7 +1785,7 @@ func addNewTasks(ctx context.Context, creationInfo TaskCreationInfo, existingBui
 
 // activateExistingInactiveTasks will find existing inactive tasks in the patch that need to be activated as
 // part of the patch re-configuration.
-func activateExistingInactiveTasks(ctx context.Context, creationInfo TaskCreationInfo, existingBuilds []build.Build) error {
+func activateExistingInactiveTasks(ctx context.Context, creationInfo TaskCreationInfo, existingBuilds []build.Build, caller string) error {
 	existingTasksToActivate := []task.Task{}
 	for _, b := range existingBuilds {
 		tasksInBuild, err := task.FindAll(db.Query(task.ByBuildId(b.Id)).WithFields(task.DisplayNameKey, task.ActivatedKey, task.BuildIdKey, task.VersionKey))
@@ -1813,7 +1804,7 @@ func activateExistingInactiveTasks(ctx context.Context, creationInfo TaskCreatio
 		}
 	}
 	if len(existingTasksToActivate) > 0 {
-		if err := SetActiveState(ctx, evergreen.DefaultTaskActivator, true, existingTasksToActivate...); err != nil {
+		if err := SetActiveState(ctx, caller, true, existingTasksToActivate...); err != nil {
 			return errors.Wrap(err, "setting tasks to active")
 		}
 	}

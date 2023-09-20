@@ -346,6 +346,8 @@ func (r *mutationResolver) SetPatchVisibility(ctx context.Context, patchIds []st
 // SchedulePatch is the resolver for the schedulePatch field.
 func (r *mutationResolver) SchedulePatch(ctx context.Context, patchID string, configure PatchConfigure) (*restModel.APIPatch, error) {
 	patchUpdateReq := buildFromGqlInput(configure)
+	usr := mustHaveUser(ctx)
+	patchUpdateReq.Caller = usr.Id
 	version, err := model.VersionFindOneId(patchID)
 	if err != nil && !adb.ResultsNotFound(err) {
 		return nil, InternalServerError.Send(ctx, fmt.Sprintf("Error occurred fetching patch '%s': %s", patchID, err.Error()))
@@ -1265,8 +1267,9 @@ func (r *mutationResolver) UpdateUserSettings(ctx context.Context, userSettings 
 
 // RemoveItemFromCommitQueue is the resolver for the removeItemFromCommitQueue field.
 func (r *mutationResolver) RemoveItemFromCommitQueue(ctx context.Context, commitQueueID string, issue string) (*string, error) {
-	username := gimlet.GetUser(ctx).DisplayName()
-	result, err := data.FindAndRemoveCommitQueueItem(ctx, commitQueueID, issue, username, fmt.Sprintf("removed by user '%s'", username))
+	usr := mustHaveUser(ctx)
+
+	result, err := data.FindAndRemoveCommitQueueItem(ctx, commitQueueID, issue, usr.DisplayName(), fmt.Sprintf("removed by user '%s'", usr.DisplayName()))
 	if err != nil {
 		return nil, InternalServerError.Send(ctx, fmt.Sprintf("error removing item %s from commit queue %s: %s",
 			issue, commitQueueID, err.Error()))

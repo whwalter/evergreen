@@ -354,7 +354,9 @@ Parameters:
 
 -   `dir`: the directory to clone into
 -   `revisions`: For commit builds, each module should be passed as
-    `<module_name> : ${<module_name>_rev}`. For patch builds, the hash
+    `<module_name> : ${<module_name>_rev}` (these are loaded from the [manifest](../API/REST-V2-Usage.md#manifest) 
+    at the beginning of the command). 
+    For patch builds, the hash
     must be passed directly as `<module_name> : <hash>`. Note that this
     means that for patch builds, editing the
     ["modules"](Project-Configuration-Files.md#modules)
@@ -367,8 +369,8 @@ Parameters:
     yaml.
 -   `clone_depth`: Clone with `git clone --depth <clone_depth>`. For
     patch builds, Evergreen will `git fetch --unshallow` if the base
-    commit is older than `<clone_depth>` commits.
--   `shallow_clone`: Sets `clone_depth` to 100.
+    commit is older than `<clone_depth>` commits. `clone_depth` takes precedence over `shallow_clone`.
+-   `shallow_clone`: Sets `clone_depth` to 100, if not already set.
 -   `recurse_submodules`: automatically initialize and update each
     submodule in the repository, including any nested submodules.
 
@@ -379,9 +381,16 @@ The parameters for each module are:
 -   `prefix`: the subdirectory to clone the repository in. It will be
     the repository name as a top-level directory in `dir` if omitted
 -   `ref`: must be a commit hash, takes precedence over the `branch`
-    parameter if both specified
+    parameter if both specified (for commits)
 -   `branch`: must be the name of branch, commit hashes _are not
     accepted_.
+
+More specifically, module hash priority is as follows:
+* For commit queue and GitHub merge queue patches, Evergreen always uses the module branch name, to ensure accurate testing.
+* For other patches, the initial default is to the githash in set-module, if specified.
+* For both commits and patches, the next default is to the `<module_name>` set in revisions for the command.
+* For commits, if this is not available, the next default is to ref, and then to branch. *Note that this 
+doesn't work for patches -- hashes will need to be specified in the revisions section of the command.*
 
 ## gotest.parse_files
 
@@ -453,7 +462,8 @@ EC2 Parameters:
     non-default account. Must set if `aws_access_key_id` is set.
 -   `device_name` - name of EBS device
 -   `distro` - Evergreen distro to start. Must set `ami` or `distro` but
-    must not set both.
+    must not set both. Note that the distro setup script will not run for 
+    hosts spawned by this command, so any required initial setup must be done manually.
 -   `ebs_block_device` - list of the following parameters:
 -   `ebs_iops` - EBS provisioned IOPS.
 -   `ebs_size` - Size of EBS volume in GB.
@@ -530,7 +540,14 @@ permissions:
 Certain instances require more time for SSH access to become available.
 If the user plans to execute commands on the remote host, then waiting
 for SSH access to become available is mandatory. Below is an Evergreen
-function that probes for SSH connectivity:
+function that probes for SSH connectivity.
+
+Note, however, an important shell caveat! By default Evergreen implements
+shell scripting by piping the script into the shell. This means that a command
+that reads from stdin, like ssh, will read the script from stdin, and none
+of the commands after ssh will execute. To work around this, you can set
+`exec_as_string` on `shell.exec`, or in bash you can wrap curly braces around the
+script to make sure it is read entirely before executing.
 
 ``` yaml
 functions:
@@ -538,8 +555,10 @@ functions:
   ssh-ready:
     command: shell.exec
     params:
+      exec_as_string: true
       script: |
         user=${admin_user_name}
+        ## The following hosts.yml file is generated as the output of the host.list command below
         hostname=$(tr -d '"[]{}' < buildhost-configuration/hosts.yml | cut -d , -f 1 | awk -F : '{print $2}')
         identity_file=~/.ssh/mcipacker.pem
 
@@ -588,9 +607,12 @@ tasks:
       - func: ssh-ready
       - func: other-tasks
 ```
-
-The mcipacker.pem key file was created by echoing the value of the
-\${\_\_project_aws_ssh_key_value} expansion into the file. This
+Note:
+- The `${admin_user_name}` expansion should be set to the value of the
+**user** field set for the command's distro, which can be inspected [on Evergreen's distro page](https://evergreen.mongodb.com/distros).
+This is not a default expansion, so it must be set manually.
+- The mcipacker.pem key file was created by echoing the value of the
+`${__project_aws_ssh_key_value}` expansion (which gets populated automatically with the ssh public key value) into the file. This
 expansion is automatically set by Evergreen when the host is spawned.
 
 ## host.list
@@ -1243,7 +1265,10 @@ Parameters:
     If the background script exits with an error while the
     task is still running, the task will continue running.
 -   `silent`: if set to true, does not log any shell output during
-    execution; useful to avoid leaking sensitive info
+    execution; useful to avoid leaking sensitive info. Note that you should 
+    not pass secrets as command-line arguments but instead as environment
+    variables or from a file, as Evergreen runs `ps` periodically, which
+    will log command-line arguments.
 -   `continue_on_err`: by default, a task will fail if the script returns
     a non-zero exit code; for scripts that set `background`, the task will
     fail only if the script fails to start. If `continue_on_err`
@@ -1307,7 +1332,10 @@ Parameters:
     does not wait for the process to exit before running the next command. 
     If the background process exits with an error while the
     task is still running, the task will continue running.
--   `silent`: do not log output of command
+-   `silent`: do not log output of command. Note that you should
+    not pass secrets as command-line arguments but instead as environment
+    variables or from a file, as Evergreen runs `ps` periodically, which
+    will log command-line arguments.
 -   `system_log`: write output to system logs instead of task logs
 -   `working_dir`: working directory to start shell in
 -   `ignore_standard_out`: if true, do not log standard output
@@ -1371,4 +1399,4 @@ Parameters:
 Both parameters are optional. If not set, the task will use the
 definition from the project config.
 
-Commands can also be configured to run if timeout occurs, as documented [here](Project-Configuration-Files.md#pre-post-and-timeout).
+Commands can also be configured to run if timeout occurs, as documented [here](Project-Configuration-Files.md#timeout-handler).

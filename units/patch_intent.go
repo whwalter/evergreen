@@ -283,13 +283,13 @@ func (j *patchIntentProcessor) finishPatch(ctx context.Context, patchDoc *patch.
 		patchedParserProject = patchConfig.PatchedParserProject
 		patchedProjectConfig = patchConfig.PatchedProjectConfig
 	}
-	if errs := validator.CheckProjectErrors(ctx, patchedProject, false); len(errs.AtLevel(validator.Error)) != 0 {
+	if errs := validator.CheckProjectErrors(ctx, patchedProject, false).AtLevel(validator.Error); len(errs) != 0 {
 		validationCatcher.Errorf("invalid patched config syntax: %s", validator.ValidationErrorsToString(errs))
 	}
-	if errs := validator.CheckProjectSettings(ctx, j.env.Settings(), patchedProject, pref, false); len(errs.AtLevel(validator.Error)) != 0 {
+	if errs := validator.CheckProjectSettings(ctx, j.env.Settings(), patchedProject, pref, false).AtLevel(validator.Error); len(errs) != 0 {
 		validationCatcher.Errorf("invalid patched config for current project settings: %s", validator.ValidationErrorsToString(errs))
 	}
-	if errs := validator.CheckPatchedProjectConfigErrors(patchedProjectConfig); len(errs.AtLevel(validator.Error)) != 0 {
+	if errs := validator.CheckPatchedProjectConfigErrors(patchedProjectConfig).AtLevel(validator.Error); len(errs) != 0 {
 		validationCatcher.Errorf("invalid patched project config syntax: %s", validator.ValidationErrorsToString(errs))
 	}
 	if validationCatcher.HasErrors() {
@@ -534,6 +534,15 @@ func (j *patchIntentProcessor) createGitHubMergeSubscription(ctx context.Context
 	}))
 	// If we don't find any rules, send the default.
 	if len(rules) == 0 {
+		grip.Debug(message.Fields{
+			"job":      j.ID(),
+			"job_type": j.Type,
+			"message":  "could not find branch protection rules, sending default status",
+			"org":      p.GithubMergeData.Org,
+			"repo":     p.GithubMergeData.Repo,
+			"branch":   p.GithubMergeData.BaseBranch,
+			"project":  p.Project,
+		})
 		input.Context = "evergreen"
 		catcher.Wrap(thirdparty.SendPendingStatusToGithub(ctx, input, j.env.Settings().Ui.Url), "failed to send pending status to GitHub")
 	} else {
@@ -594,7 +603,7 @@ func (j *patchIntentProcessor) buildTasksAndVariants(patchDoc *patch.Patch, proj
 	}
 
 	// If the user only wants failed tasks but the previous patch has no failed tasks, there is nothing to build
-	skipForFailed := failedOnly && previousPatchStatus != evergreen.PatchFailed
+	skipForFailed := failedOnly && previousPatchStatus != evergreen.VersionFailed
 
 	if len(patchDoc.VariantsTasks) == 0 && !skipForFailed {
 		project.BuildProjectTVPairs(patchDoc, j.intent.GetAlias())

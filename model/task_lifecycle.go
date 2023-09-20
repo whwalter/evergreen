@@ -201,7 +201,7 @@ func findMissingTasks(taskIDs []string, tasksPresent map[string]struct{}) ([]tas
 // DisableStaleContainerTasks disables all container tasks that have been
 // scheduled to run for a long time without actually dispatching the task.
 func DisableStaleContainerTasks(caller string) error {
-	query := task.IsContainerTaskScheduledQuery()
+	query := task.ScheduledContainerTasksQuery()
 	query[task.ActivatedTimeKey] = bson.M{"$lte": time.Now().Add(-task.UnschedulableThreshold)}
 
 	tasks, err := task.FindAll(db.Query(query))
@@ -567,6 +567,7 @@ func MarkEnd(ctx context.Context, settings *evergreen.Settings, t *task.Task, ca
 	if t.ResultsFailed && detailsCopy.Status != evergreen.TaskFailed {
 		detailsCopy.Type = evergreen.CommandTypeTest
 		detailsCopy.Status = evergreen.TaskFailed
+		detailsCopy.Description = evergreen.TaskDescriptionResultsFailed
 	}
 
 	if t.Status == detailsCopy.Status {
@@ -577,6 +578,7 @@ func MarkEnd(ctx context.Context, settings *evergreen.Settings, t *task.Task, ca
 		return nil
 	}
 	if detailsCopy.Status == evergreen.TaskSucceeded && t.MustHaveResults && !t.HasResults() {
+		detailsCopy.Type = evergreen.CommandTypeTest
 		detailsCopy.Status = evergreen.TaskFailed
 		detailsCopy.Description = evergreen.TaskDescriptionNoResults
 	}
@@ -1532,10 +1534,7 @@ func updateVersionStatus(v *Version) (string, error) {
 
 // UpdatePatchStatus updates the status of a patch.
 func UpdatePatchStatus(p *patch.Patch, versionStatus string) error {
-	patchStatus, err := evergreen.VersionStatusToPatchStatus(versionStatus)
-	if err != nil {
-		return errors.Wrapf(err, "getting patch status from version status '%s'", versionStatus)
-	}
+	patchStatus := evergreen.VersionStatusToPatchStatus(versionStatus)
 
 	if patchStatus == p.Status {
 		return nil
@@ -1543,11 +1542,11 @@ func UpdatePatchStatus(p *patch.Patch, versionStatus string) error {
 
 	event.LogPatchStateChangeEvent(p.Version, patchStatus)
 
-	if evergreen.IsFinishedPatchStatus(patchStatus) {
-		if err = p.MarkFinished(patchStatus, time.Now()); err != nil {
+	if evergreen.IsFinishedVersionStatus(patchStatus) {
+		if err := p.MarkFinished(patchStatus, time.Now()); err != nil {
 			return errors.Wrapf(err, "marking patch '%s' as finished with status '%s'", p.Id.Hex(), patchStatus)
 		}
-	} else if err = p.UpdateStatus(patchStatus); err != nil {
+	} else if err := p.UpdateStatus(patchStatus); err != nil {
 		return errors.Wrapf(err, "updating patch '%s' with status '%s'", p.Id.Hex(), patchStatus)
 	}
 
@@ -1631,10 +1630,7 @@ func UpdateBuildAndVersionStatusForTask(ctx context.Context, t *task.Task) error
 			if err != nil {
 				return errors.Wrapf(err, "getting collective status for patch '%s'", p.Id.Hex())
 			}
-			versionStatus, err := evergreen.PatchStatusToVersionStatus(collectiveStatus)
-			if err != nil {
-				return errors.Wrapf(err, "getting version status")
-			}
+			versionStatus := evergreen.PatchStatusToVersionStatus(collectiveStatus)
 			if parentPatch != nil {
 				event.LogVersionChildrenCompletionEvent(parentPatch.Id.Hex(), versionStatus, parentPatch.Author)
 			} else {
@@ -1726,7 +1722,7 @@ func MarkStart(t *task.Task, updates *StatusChanges) error {
 	if evergreen.IsPatchRequester(t.Requester) {
 		err := patch.TryMarkStarted(t.Version, startTime)
 		if err == nil {
-			updates.PatchNewStatus = evergreen.PatchStarted
+			updates.PatchNewStatus = evergreen.VersionStarted
 
 		} else if !adb.ResultsNotFound(err) {
 			return errors.WithStack(err)
@@ -2019,8 +2015,7 @@ func ClearAndResetStrandedHostTask(ctx context.Context, settings *evergreen.Sett
 // aborted, the task is reset. If the task was aborted, we do not reset the task
 // and it is just marked as failed alongside other necessary updates to finish the task.
 func FixStaleTask(ctx context.Context, settings *evergreen.Settings, t *task.Task) error {
-	err := UpdateBlockedDependencies(t)
-	if err != nil {
+	if err := UpdateBlockedDependencies(t); err != nil {
 		return errors.Wrapf(err, "updating blocked dependencies for task '%s'", t.Id)
 	}
 
@@ -2032,7 +2027,18 @@ func FixStaleTask(ctx context.Context, settings *evergreen.Settings, t *task.Tas
 		}
 	} else {
 		if err := resetSystemFailedTask(ctx, settings, t, failureDesc); err != nil {
-			return errors.Wrap(err, "resetting heartbeat task")
+			if !t.IsPartOfDisplay() {
+				return errors.Wrap(err, "resetting heartbeat task")
+			}
+			// It's possible for display tasks to race, since multiple execution tasks can system fail at the same time.
+			// Only error if the display task hasn't actually been reset.
+			dt, dbErr := t.GetDisplayTask()
+			if dbErr != nil {
+				return errors.Wrap(dbErr, "confirming display task status")
+			}
+			if utility.StringSliceContains(evergreen.TaskCompletedStatuses, dt.Status) {
+				return errors.Wrap(err, "resetting heartbeat task")
+			}
 		}
 	}
 
@@ -2043,7 +2049,6 @@ func FixStaleTask(ctx context.Context, settings *evergreen.Settings, t *task.Tas
 		"execution_platform": t.ExecutionPlatform,
 		"description":        failureDesc,
 	})
-
 	return nil
 }
 

@@ -243,7 +243,7 @@ func (opts cloneOpts) buildSSHCloneCommand() ([]string, error) {
 		cloneCmd = fmt.Sprintf("%s --recurse-submodules", cloneCmd)
 	}
 	if opts.useVerbose {
-		cloneCmd = fmt.Sprintf("GIT_TRACE=1 GIT_CURL_VERBOSE=1 %s", cloneCmd)
+		cloneCmd = fmt.Sprintf("GIT_TRACE=1 %s", cloneCmd)
 	}
 	if opts.cloneDepth > 0 {
 		cloneCmd = fmt.Sprintf("%s --depth %d", cloneCmd, opts.cloneDepth)
@@ -506,7 +506,7 @@ func (c *gitFetchProject) Execute(ctx context.Context, comm client.Communicator,
 		return errors.Wrap(err, "loading manifest")
 	}
 
-	if err = util.ExpandValues(c, conf.Expansions); err != nil {
+	if err = util.ExpandValues(c, &conf.Expansions); err != nil {
 		return errors.Wrap(err, "applying expansions")
 	}
 
@@ -655,13 +655,13 @@ func (c *gitFetchProject) fetchModuleSource(ctx context.Context,
 
 	// use submodule revisions based on the main patch. If there is a need in the future,
 	// this could maybe use the most recent submodule revision of all requested patches.
-	// We ignore set-module changes for commit queue, since we should verify HEAD before merging.
+	// We ignore set-module changes for commit queue and GitHub merge queue, since we should verify HEAD before merging.
 	var modulePatch *patch.ModulePatch
 	var revision string
 	if p != nil {
 		modulePatch := p.FindModule(moduleName)
 		if modulePatch != nil {
-			if conf.Task.Requester == evergreen.MergeTestRequester {
+			if conf.Task.Requester == evergreen.MergeTestRequester || conf.Task.Requester == evergreen.GithubMergeRequester {
 				revision = module.Branch
 				c.logModuleRevision(logger, revision, moduleName, "defaulting to HEAD for merge")
 			} else {
@@ -739,7 +739,7 @@ func (c *gitFetchProject) fetchModuleSource(ctx context.Context,
 	// read/write the buffer, so the buffer has to be thread-safe.
 	stdErr := utility.MakeSafeBuffer(bytes.Buffer{})
 	err = jpm.CreateCommand(ctx).Add([]string{"bash", "-c", strings.Join(moduleCmds, "\n")}).
-		Directory(filepath.ToSlash(getJoinedWithWorkDir(conf, c.Directory))).
+		Directory(filepath.ToSlash(getWorkingDirectory(conf, c.Directory))).
 		SetOutputSender(level.Info, logger.Task().GetSender()).SetErrorWriter(stdErr).Run(ctx)
 
 	errOutput := stdErr.String()
@@ -942,7 +942,7 @@ func (c *gitFetchProject) getApplyCommand(patchFile string, conf *internal.TaskC
 	}
 	apply := fmt.Sprintf("git apply --binary --index < '%s'", patchFile)
 	if useVerbose {
-		apply = fmt.Sprintf("GIT_TRACE=1 GIT_CURL_VERBOSE=1 %s", apply)
+		apply = fmt.Sprintf("GIT_TRACE=1 %s", apply)
 	}
 	return apply, nil
 }
@@ -1050,7 +1050,7 @@ func (c *gitFetchProject) applyPatch(ctx context.Context, logger client.LoggerPr
 		cmdsJoined := strings.Join(patchCommandStrings, "\n")
 
 		cmd := jpm.CreateCommand(ctx).Add([]string{"bash", "-c", cmdsJoined}).
-			Directory(filepath.ToSlash(getJoinedWithWorkDir(conf, c.Directory))).
+			Directory(filepath.ToSlash(getWorkingDirectory(conf, c.Directory))).
 			SetOutputSender(level.Info, logger.Task().GetSender()).SetErrorSender(level.Error, logger.Task().GetSender())
 
 		if err = cmd.Run(ctx); err != nil {

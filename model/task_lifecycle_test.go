@@ -483,7 +483,7 @@ func TestSetActiveState(t *testing.T) {
 		p := &patch.Patch{
 			Id:          versionId,
 			Version:     v.Id,
-			Status:      evergreen.PatchStarted,
+			Status:      evergreen.VersionStarted,
 			PatchNumber: 12,
 			Alias:       evergreen.CommitQueueAlias,
 		}
@@ -533,11 +533,11 @@ func TestSetActiveState(t *testing.T) {
 		})
 		Convey("when deactivating an active task as evergreen", func() {
 			Convey("if the task is activated by evergreen, the task should deactivate", func() {
-				So(SetActiveState(ctx, evergreen.DefaultTaskActivator, true, *testTask), ShouldBeNil)
+				So(SetActiveState(ctx, "", true, *testTask), ShouldBeNil)
 				testTask, err = task.FindOne(db.Query(task.ById(testTask.Id)))
 				So(err, ShouldBeNil)
-				So(testTask.ActivatedBy, ShouldEqual, evergreen.DefaultTaskActivator)
-				So(SetActiveState(ctx, evergreen.DefaultTaskActivator, false, *testTask), ShouldBeNil)
+				So(testTask.ActivatedBy, ShouldEqual, "")
+				So(SetActiveState(ctx, "", false, *testTask), ShouldBeNil)
 				testTask, err = task.FindOne(db.Query(task.ById(testTask.Id)))
 				So(err, ShouldBeNil)
 				So(testTask.Activated, ShouldEqual, false)
@@ -558,7 +558,7 @@ func TestSetActiveState(t *testing.T) {
 				testTask, err = task.FindOne(db.Query(task.ById(testTask.Id)))
 				So(err, ShouldBeNil)
 				So(testTask.ActivatedBy, ShouldEqual, evergreen.StepbackTaskActivator)
-				So(SetActiveState(ctx, evergreen.DefaultTaskActivator, false, *testTask), ShouldBeNil)
+				So(SetActiveState(ctx, "", false, *testTask), ShouldBeNil)
 				testTask, err = task.FindOne(db.Query(task.ById(testTask.Id)))
 				So(err, ShouldBeNil)
 				So(testTask.Activated, ShouldEqual, true)
@@ -577,7 +577,7 @@ func TestSetActiveState(t *testing.T) {
 				testTask, err = task.FindOne(db.Query(task.ById(testTask.Id)))
 				So(err, ShouldBeNil)
 				So(testTask.ActivatedBy, ShouldEqual, userName)
-				So(SetActiveState(ctx, evergreen.DefaultTaskActivator, false, *testTask), ShouldBeNil)
+				So(SetActiveState(ctx, "", false, *testTask), ShouldBeNil)
 				testTask, err = task.FindOne(db.Query(task.ById(testTask.Id)))
 				So(err, ShouldBeNil)
 				So(testTask.Activated, ShouldEqual, true)
@@ -595,10 +595,10 @@ func TestSetActiveState(t *testing.T) {
 		Convey("when deactivating an active task a normal user", func() {
 			u := "test_user"
 			Convey("if the task is activated by evergreen, the task should deactivate", func() {
-				So(SetActiveState(ctx, evergreen.DefaultTaskActivator, true, *testTask), ShouldBeNil)
+				So(SetActiveState(ctx, "", true, *testTask), ShouldBeNil)
 				testTask, err = task.FindOne(db.Query(task.ById(testTask.Id)))
 				So(err, ShouldBeNil)
-				So(testTask.ActivatedBy, ShouldEqual, evergreen.DefaultTaskActivator)
+				So(testTask.ActivatedBy, ShouldEqual, "")
 				So(SetActiveState(ctx, u, false, *testTask), ShouldBeNil)
 				testTask, err = task.FindOne(db.Query(task.ById(testTask.Id)))
 				So(err, ShouldBeNil)
@@ -1244,7 +1244,7 @@ func TestUpdateBuildStatusForTask(t *testing.T) {
 			},
 			expectedBuildStatus:       evergreen.BuildCreated,
 			expectedVersionStatus:     evergreen.VersionCreated,
-			expectedPatchStatus:       evergreen.PatchCreated,
+			expectedPatchStatus:       evergreen.VersionCreated,
 			expectedBuildActivation:   true,
 			expectedVersionActivation: true,
 			expectedPatchActivation:   true,
@@ -1256,7 +1256,7 @@ func TestUpdateBuildStatusForTask(t *testing.T) {
 			},
 			expectedBuildStatus:       evergreen.BuildCreated,
 			expectedVersionStatus:     evergreen.VersionCreated,
-			expectedPatchStatus:       evergreen.PatchCreated,
+			expectedPatchStatus:       evergreen.VersionCreated,
 			expectedBuildActivation:   false,
 			expectedVersionActivation: false,
 			expectedPatchActivation:   true, // patch activation is a bit different, since it indicates if the patch has been finalized.
@@ -1268,7 +1268,7 @@ func TestUpdateBuildStatusForTask(t *testing.T) {
 			},
 			expectedBuildStatus:       evergreen.BuildStarted,
 			expectedVersionStatus:     evergreen.VersionStarted,
-			expectedPatchStatus:       evergreen.PatchStarted,
+			expectedPatchStatus:       evergreen.VersionStarted,
 			expectedBuildActivation:   true,
 			expectedVersionActivation: true,
 			expectedPatchActivation:   true,
@@ -1280,7 +1280,7 @@ func TestUpdateBuildStatusForTask(t *testing.T) {
 			},
 			expectedBuildStatus:       evergreen.BuildSucceeded,
 			expectedVersionStatus:     evergreen.VersionSucceeded,
-			expectedPatchStatus:       evergreen.PatchSucceeded,
+			expectedPatchStatus:       evergreen.LegacyPatchSucceeded,
 			expectedBuildActivation:   true,
 			expectedVersionActivation: true,
 			expectedPatchActivation:   true,
@@ -1292,7 +1292,7 @@ func TestUpdateBuildStatusForTask(t *testing.T) {
 			},
 			expectedBuildStatus:       evergreen.BuildSucceeded,
 			expectedVersionStatus:     evergreen.VersionSucceeded,
-			expectedPatchStatus:       evergreen.PatchSucceeded,
+			expectedPatchStatus:       evergreen.LegacyPatchSucceeded,
 			expectedBuildActivation:   true,
 			expectedVersionActivation: true,
 			expectedPatchActivation:   true,
@@ -1304,7 +1304,7 @@ func TestUpdateBuildStatusForTask(t *testing.T) {
 			},
 			expectedBuildStatus:       evergreen.BuildStarted,
 			expectedVersionStatus:     evergreen.VersionStarted,
-			expectedPatchStatus:       evergreen.PatchStarted,
+			expectedPatchStatus:       evergreen.VersionStarted,
 			expectedBuildActivation:   true,
 			expectedVersionActivation: true,
 			expectedPatchActivation:   true,
@@ -1316,7 +1316,7 @@ func TestUpdateBuildStatusForTask(t *testing.T) {
 			},
 			expectedBuildStatus:       evergreen.BuildFailed,
 			expectedVersionStatus:     evergreen.VersionFailed,
-			expectedPatchStatus:       evergreen.PatchFailed,
+			expectedPatchStatus:       evergreen.VersionFailed,
 			expectedBuildActivation:   true,
 			expectedVersionActivation: true,
 			expectedPatchActivation:   true,
@@ -1340,7 +1340,7 @@ func TestUpdateBuildStatusForTask(t *testing.T) {
 			},
 			expectedBuildStatus:       evergreen.BuildCreated,
 			expectedVersionStatus:     evergreen.VersionCreated,
-			expectedPatchStatus:       evergreen.PatchCreated,
+			expectedPatchStatus:       evergreen.VersionCreated,
 			expectedBuildActivation:   true,
 			expectedVersionActivation: true,
 			expectedPatchActivation:   true,
@@ -1363,7 +1363,7 @@ func TestUpdateBuildStatusForTask(t *testing.T) {
 			}
 			p := &patch.Patch{
 				Id:        patch.NewId(v.Id),
-				Status:    evergreen.PatchCreated,
+				Status:    evergreen.VersionCreated,
 				Activated: true,
 			}
 			require.NoError(t, b.Insert())
@@ -1424,7 +1424,7 @@ func TestUpdateVersionAndPatchStatusForBuilds(t *testing.T) {
 	}
 	p := &patch.Patch{
 		Id:              patch.NewId(b.Version),
-		Status:          evergreen.PatchFailed,
+		Status:          evergreen.VersionFailed,
 		GithubPatchData: thirdparty.GithubPatch{HeadOwner: "q"},
 	}
 	v := &Version{
@@ -1462,7 +1462,7 @@ func TestUpdateVersionAndPatchStatusForBuilds(t *testing.T) {
 	assert.Equal(t, evergreen.BuildStarted, dbBuild.Status)
 	dbPatch, err := patch.FindOneId(p.Id.Hex())
 	assert.NoError(t, err)
-	assert.Equal(t, evergreen.PatchStarted, dbPatch.Status)
+	assert.Equal(t, evergreen.VersionStarted, dbPatch.Status)
 
 	err = task.UpdateOne(
 		bson.M{task.IdKey: testTask.Id},
@@ -1475,7 +1475,7 @@ func TestUpdateVersionAndPatchStatusForBuilds(t *testing.T) {
 	assert.Equal(t, evergreen.BuildFailed, dbBuild.Status)
 	dbPatch, err = patch.FindOneId(p.Id.Hex())
 	assert.NoError(t, err)
-	assert.Equal(t, evergreen.PatchFailed, dbPatch.Status)
+	assert.Equal(t, evergreen.VersionFailed, dbPatch.Status)
 }
 
 func TestUpdateBuildStatusForTaskReset(t *testing.T) {
@@ -2035,7 +2035,6 @@ func TestTaskStatusImpactedByFailedTest(t *testing.T) {
 			reset()
 			testTask.ResultsService = testresult.TestResultsServiceLocal
 			testTask.ResultsFailed = true
-			detail.Status = evergreen.TaskFailed
 			So(MarkEnd(ctx, settings, testTask, "", time.Now(), detail, true), ShouldBeNil)
 
 			v, err := VersionFindOneId(v.Id)
@@ -2049,6 +2048,8 @@ func TestTaskStatusImpactedByFailedTest(t *testing.T) {
 			taskData, err := task.FindOne(db.Query(task.ById(testTask.Id)))
 			So(err, ShouldBeNil)
 			So(taskData.Status, ShouldEqual, evergreen.TaskFailed)
+			So(taskData.Details.Type, ShouldEqual, evergreen.CommandTypeTest)
+			So(taskData.Details.Description, ShouldEqual, evergreen.TaskDescriptionResultsFailed)
 		})
 
 		Convey("incomplete versions report updates", func() {
@@ -2793,7 +2794,7 @@ func TestTryDequeueAndAbortBlockedCommitQueueItem(t *testing.T) {
 	p := &patch.Patch{
 		Id:          patch.NewId(patchID),
 		Version:     v.Id,
-		Status:      evergreen.PatchStarted,
+		Status:      evergreen.VersionStarted,
 		PatchNumber: 12,
 		Alias:       evergreen.CommitQueueAlias,
 	}
@@ -2855,7 +2856,7 @@ func TestTryDequeueAndAbortCommitQueueItem(t *testing.T) {
 		Id:      versionId,
 		Version: v.Id,
 		Alias:   evergreen.CommitQueueAlias,
-		Status:  evergreen.PatchStarted,
+		Status:  evergreen.VersionStarted,
 	}
 	b := build.Build{
 		Id:      "my-build",
