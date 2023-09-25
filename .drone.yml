@@ -19,10 +19,9 @@ steps:
       target: production
       create_repository: true
       registry: 795250896452.dkr.ecr.us-east-1.amazonaws.com
-      repo: devprod-platform/${DRONE_REPO_NAME}
+      repo: devprod-platform/evergreen-poc
       tags:
         - git-${DRONE_COMMIT_SHA:0:7}-${DRONE_STAGE_ARCH}
-        - ${DRONE_STAGE_ARCH}-latest
       access_key:
         from_secret: ecr_access_key
       secret_key:
@@ -55,7 +54,7 @@ steps:
       add_repos: [mongodb=https://10gen.github.io/helm-charts]
       namespace: devprod-platform
       release: evergreen-poc
-      values: image.tag=git-${DRONE_COMMIT_SHA:0:7},image.repository=795250896452.dkr.ecr.us-east-1.amazonaws.com/devprod-platform/${DRONE_REPO_NAME}
+      values: image.tag=git-${DRONE_COMMIT_SHA:0:7},image.repository=795250896452.dkr.ecr.us-east-1.amazonaws.com/devprod-platform/evergreen-poc
       api_server: https://api.staging.corp.mongodb.com
       kubernetes_token:
         from_secret: staging_kubernetes_token
