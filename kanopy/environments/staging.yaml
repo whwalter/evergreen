@@ -1,0 +1,45 @@
+
+#
+# "MONGO_URL" is defined as a secret! See:
+#   https://kanopy.devops.prod.corp.mongodb.com/docs/getting_started/application_configuration/#configuring-secret-environment-variables
+#
+# To rotate the API key, change to the right Kanopy context, and then run:
+#    helm ksec set evergreen-kanopy-poc MONGO_URL=<newUri>
+#
+
+arch: arm64
+
+envSecrets:
+  MONGO_URL: evergreen-kanopy-poc
+
+annotations:
+  app.kubernetes.io/name: evergreen-poc-app
+  app.kubernetes.io/part-of: evergreen-poc
+  app.kubernetes.io/instance: evergreen-poc-app
+  app.kubernetes.io/component: evergreen-poc
+  app.kubernetes.io/version: poc
+
+replicaCount: 1
+
+ingress:
+  enabled: true
+  hosts:
+    - evergreen-poc.devprod-platform.staging.corp.mongodb.com
+
+services:
+  - name: web
+    ingress: true
+    port: 8443
+    targetPort: 8443
+
+
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "500m"
+  limits:
+    memory: "1Gi"
+    cpu: "1000m"
+
+mesh:
+  enabled: true

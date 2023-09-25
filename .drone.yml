@@ -38,36 +38,25 @@ steps:
 ---
 kind: pipeline
 type: kubernetes
-name: build-and-publish-amd64
+name: publish-to-staging
 
 trigger:
   event:
-    - push
-
-platform:
-  os: linux
-  arch: amd64
+    - promote
+  target:
+    - staging
 
 steps:
-  - name: publish
-    image: plugins/kaniko-ecr
+  - name: deploy-staging
+    image: quay.io/mongodb/drone-helm:v3
     settings:
-      dockerfile: build/Dockerfile
-      target: production
-      create_repository: true
-      registry: 795250896452.dkr.ecr.us-east-1.amazonaws.com
-      repo: devprod-platform/${DRONE_REPO_NAME}
-      tags:
-        - git-${DRONE_COMMIT_SHA:0:7}-${DRONE_STAGE_ARCH}
-        - ${DRONE_STAGE_ARCH}-latest
-      access_key:
-        from_secret: ecr_access_key
-      secret_key:
-        from_secret: ecr_secret_key
-      build_args:
-        - GOOS=${DRONE_STAGE_OS}
-        - GOARCH=${DRONE_STAGE_ARCH}
-        - GOVERSION=1.20.7
-    when:
-      event:
-        - push
+      chart: mongodb/web-app
+      chart_version: 4.15.6
+      add_repos: [mongodb=https://10gen.github.io/helm-charts]
+      namespace: devprod-platform
+      release: evergreen-poc
+      values: image.tag=git-${DRONE_COMMIT_SHA:0:7},image.repository=795250896452.dkr.ecr.us-east-1.amazonaws.com/devprod-platform/${DRONE_REPO_NAME}
+      api_server: https://api.staging.corp.mongodb.com
+      kubernetes_token:
+        from_secret: staging_kubernetes_token
+      values_files: [ "kanopy/environments/staging.yaml" ]
