@@ -11,6 +11,11 @@ platform:
   os: linux
   arch: arm64
 
+resources:
+  requests:
+    cpu: 3000
+    memory: 5GiB
+
 steps:
   - name: publish
     image: plugins/kaniko-ecr
