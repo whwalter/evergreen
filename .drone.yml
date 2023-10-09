@@ -1,15 +1,11 @@
 ---
 kind: pipeline
 type: kubernetes
-name: build-and-publish-arm64
+name: build-and-publish
 
 trigger:
   event:
     - push
-
-platform:
-  os: linux
-  arch: arm64
 
 resources:
   requests:
