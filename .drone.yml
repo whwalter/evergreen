@@ -24,7 +24,7 @@ steps:
       create_repository: true
       registry: 795250896452.dkr.ecr.us-east-1.amazonaws.com
       repo: devops/evergreen
-      verbosity: debug
+        #verbosity: debug
       tags:
         - git-${DRONE_COMMIT_SHA:0:7}-${DRONE_STAGE_ARCH}
       access_key:
