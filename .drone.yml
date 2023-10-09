@@ -14,7 +14,7 @@ platform:
 resources:
   requests:
     cpu: 3000
-    memory: 5GiB
+    memory: 10GiB
 
 steps:
   - name: publish
