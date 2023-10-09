@@ -19,6 +19,9 @@ resources:
 steps:
   - name: publish
     image: plugins/kaniko-ecr
+    environment:
+      GOMAXPROCS: 3
+      GOMEMLIMIT: 10GiB
     settings:
       dockerfile: build/Dockerfile
       target: production
