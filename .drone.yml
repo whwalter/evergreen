@@ -9,8 +9,8 @@ trigger:
 
 resources:
   requests:
-    cpu: 3000
-    memory: 10GiB
+    cpu: 100
+    memory: 500MiB
 
 steps:
   - name: publish
