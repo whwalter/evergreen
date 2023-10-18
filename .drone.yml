@@ -23,7 +23,7 @@ steps:
         from_secret: ecr_secret_key
     commands:
     - repo_helper
-    - buildctl --addr tcp://buildkitd.dronev1.svc.cluster.local:1234 build  --output=type=image,name=795250896452.dkr.ecr.us-east-1.amazonaws.com/devops/evergreen:buildckit-build,push=true --local context=. --dockerfile=./build/ --frontend=dockerfile.v0 --opt target=production --opt build-arg:GOOS=linux --opt build-arg:GOARCH=amd64 --opt build-arg:GOVERSION=1.20.7
+    - buildctl --addr tcp://buildkitd.dronev1.svc.cluster.local:1234 build  --output=type=image,name=795250896452.dkr.ecr.us-east-1.amazonaws.com/devops/evergreen:buildckit-build,push=true --local context=. --local dockerfile=./build/ --frontend=dockerfile.v0 --opt target=production --opt build-arg:GOOS=linux --opt build-arg:GOARCH=amd64 --opt build-arg:GOVERSION=1.20.7
     when:
       event:
         - push
