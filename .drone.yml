@@ -14,27 +14,16 @@ resources:
 
 steps:
   - name: publish
-    image: plugins/kaniko-ecr
+    image: public.ecr.aws/kanopy/buildctl-ecr@sha256:27a2afc2d4c0552e996644827256e876ba827dddbdb269c8fd186ebc477de72ar
     environment:
-      GOMAXPROCS: 3
-      GOMEMLIMIT: 10GiB
-    settings:
-      dockerfile: build/Dockerfile
-      target: production
-      create_repository: true
-      registry: 795250896452.dkr.ecr.us-east-1.amazonaws.com
-      repo: devops/evergreen
-        #verbosity: debug
-      tags:
-        - git-${DRONE_COMMIT_SHA:0:7}-${DRONE_STAGE_ARCH}
-      access_key:
+      REPOSITORY: 795250896452.dkr.ecr.us-east-1.amazonaws.com
+      AWS_ACCESS_KEY_ID:
         from_secret: ecr_access_key
-      secret_key:
+      AWS_SECRET_ACCESS_KEY:
         from_secret: ecr_secret_key
-      build_args:
-        - GOOS=${DRONE_STAGE_OS}
-        - GOARCH=${DRONE_STAGE_ARCH}
-        - GOVERSION=1.20.7
+    commands:
+    - repo_helper
+    - buildctl build --output=type=image,name=795250896452.dkr.ecr.us-east-1.amazonaws.com/devops/evergreen:buildckit-build,push=true --local context=. --dockerfile=./build/ --frontend=dockerfile.v0 --opt target=production --opt build-arg:GOOS=linux --opt build-arg:GOARCH=amd64 --opt build-arg:GOVERSION=1.20.7
     when:
       event:
         - push
