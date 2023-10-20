@@ -7,6 +7,8 @@ trigger:
   event:
     - push
 
+platform:
+  arch: amd64
 resources:
   requests:
     cpu: 100
@@ -14,9 +16,9 @@ resources:
 
 steps:
   - name: publish
-    image: public.ecr.aws/kanopy/buildctl-ecr
+    image: public.ecr.aws/kanopy/buildctl-ecr:v0.1.0
     environment:
-      REPOSITORY: 795250896452.dkr.ecr.us-east-1.amazonaws.com
+      REGISTRY: 795250896452.dkr.ecr.us-east-1.amazonaws.com
       AWS_ACCESS_KEY_ID:
         from_secret: ecr_access_key
       AWS_SECRET_ACCESS_KEY:
@@ -44,9 +46,9 @@ resources:
 
 steps:
   - name: publish
-    image: public.ecr.aws/kanopy/buildctl-ecr
+    image: public.ecr.aws/kanopy/buildctl-ecr:v0.1.0
     environment:
-      REPOSITORY: 795250896452.dkr.ecr.us-east-1.amazonaws.com
+      REGISTRY: 795250896452.dkr.ecr.us-east-1.amazonaws.com
       AWS_ACCESS_KEY_ID:
         from_secret: ecr_access_key
       AWS_SECRET_ACCESS_KEY:
