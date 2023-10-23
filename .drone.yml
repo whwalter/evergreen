@@ -30,141 +30,141 @@ steps:
       event:
         - push
 ...
-# ---
-# kind: pipeline
-# type: kubernetes
-# name: build-and-publish-2
+---
+kind: pipeline
+type: kubernetes
+name: build-and-publish-2
 
-# trigger:
-#   event:
-#     - push
+trigger:
+  event:
+    - push
 
-# resources:
-#   requests:
-#     cpu: 100
-#     memory: 500MiB
+resources:
+  requests:
+    cpu: 100
+    memory: 500MiB
 
-# steps:
-#   - name: publish
-#     image: public.ecr.aws/kanopy/buildctl-ecr:v0.1.0
-#     environment:
-#       REGISTRY: 795250896452.dkr.ecr.us-east-1.amazonaws.com
-#       AWS_ACCESS_KEY_ID:
-#         from_secret: ecr_access_key
-#       AWS_SECRET_ACCESS_KEY:
-#         from_secret: ecr_secret_key
-#     commands:
-#     - repo_helper
-#     - buildctl --addr tcp://buildkitd.dronev1.svc.cluster.local:1234 build  --output=type=image,name=795250896452.dkr.ecr.us-east-1.amazonaws.com/devops/evergreen:buildckit-build-$(date +"%s%s"),push=true --local context=. --local dockerfile=./build/ --frontend=dockerfile.v0 --opt target=production --opt build-arg:GOOS=linux --opt build-arg:GOARCH=amd64 --opt build-arg:GOVERSION=1.20.7
-#     when:
-#       event:
-#         - push
-# ...
-# ---
-# kind: pipeline
-# type: kubernetes
-# name: build-and-publish-3
+steps:
+  - name: publish
+    image: public.ecr.aws/kanopy/buildctl-ecr:v0.1.0
+    environment:
+      REGISTRY: 795250896452.dkr.ecr.us-east-1.amazonaws.com
+      AWS_ACCESS_KEY_ID:
+        from_secret: ecr_access_key
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: ecr_secret_key
+    commands:
+    - repo_helper
+    - buildctl --addr tcp://buildkitd.dronev1.svc.cluster.local:1234 build  --output=type=image,name=795250896452.dkr.ecr.us-east-1.amazonaws.com/devops/evergreen:buildckit-build-$(date +"%s%s"),push=true --local context=. --local dockerfile=./build/ --frontend=dockerfile.v0 --opt target=production --opt build-arg:GOOS=linux --opt build-arg:GOARCH=amd64 --opt build-arg:GOVERSION=1.20.7
+    when:
+      event:
+        - push
+...
+---
+kind: pipeline
+type: kubernetes
+name: build-and-publish-3
 
-# trigger:
-#   event:
-#     - push
+trigger:
+  event:
+    - push
 
-# resources:
-#   requests:
-#     cpu: 100
-#     memory: 500MiB
+resources:
+  requests:
+    cpu: 100
+    memory: 500MiB
 
-# steps:
-#   - name: publish
-#     image: public.ecr.aws/kanopy/buildctl-ecr
-#     environment:
-#       REPOSITORY: 795250896452.dkr.ecr.us-east-1.amazonaws.com
-#       AWS_ACCESS_KEY_ID:
-#         from_secret: ecr_access_key
-#       AWS_SECRET_ACCESS_KEY:
-#         from_secret: ecr_secret_key
-#     commands:
-#     - repo_helper
-#     - buildctl --addr tcp://buildkitd.dronev1.svc.cluster.local:1234 build  --output=type=image,name=795250896452.dkr.ecr.us-east-1.amazonaws.com/devops/evergreen:buildckit-build-$(date +"%s%s"),push=true --local context=. --local dockerfile=./build/ --frontend=dockerfile.v0 --opt target=production --opt build-arg:GOOS=linux --opt build-arg:GOARCH=amd64 --opt build-arg:GOVERSION=1.20.7
-#     when:
-#       event:
-#         - push
-# ...
-# ---
-# kind: pipeline
-# type: kubernetes
-# name: build-and-publish-4
+steps:
+  - name: publish
+    image: public.ecr.aws/kanopy/buildctl-ecr
+    environment:
+      REPOSITORY: 795250896452.dkr.ecr.us-east-1.amazonaws.com
+      AWS_ACCESS_KEY_ID:
+        from_secret: ecr_access_key
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: ecr_secret_key
+    commands:
+    - repo_helper
+    - buildctl --addr tcp://buildkitd.dronev1.svc.cluster.local:1234 build  --output=type=image,name=795250896452.dkr.ecr.us-east-1.amazonaws.com/devops/evergreen:buildckit-build-$(date +"%s%s"),push=true --local context=. --local dockerfile=./build/ --frontend=dockerfile.v0 --opt target=production --opt build-arg:GOOS=linux --opt build-arg:GOARCH=amd64 --opt build-arg:GOVERSION=1.20.7
+    when:
+      event:
+        - push
+...
+---
+kind: pipeline
+type: kubernetes
+name: build-and-publish-4
 
-# trigger:
-#   event:
-#     - push
+trigger:
+  event:
+    - push
 
-# resources:
-#   requests:
-#     cpu: 100
-#     memory: 500MiB
+resources:
+  requests:
+    cpu: 100
+    memory: 500MiB
 
-# steps:
-#   - name: publish
-#     image: public.ecr.aws/kanopy/buildctl-ecr
-#     environment:
-#       REPOSITORY: 795250896452.dkr.ecr.us-east-1.amazonaws.com
-#       AWS_ACCESS_KEY_ID:
-#         from_secret: ecr_access_key
-#       AWS_SECRET_ACCESS_KEY:
-#         from_secret: ecr_secret_key
-#     commands:
-#     - repo_helper
-#     - buildctl --addr tcp://buildkitd.dronev1.svc.cluster.local:1234 build  --output=type=image,name=795250896452.dkr.ecr.us-east-1.amazonaws.com/devops/evergreen:buildckit-build-$(date +"%s%s"),push=true --local context=. --local dockerfile=./build/ --frontend=dockerfile.v0 --opt target=production --opt build-arg:GOOS=linux --opt build-arg:GOARCH=amd64 --opt build-arg:GOVERSION=1.20.7
-#     when:
-#       event:
-#         - push
-# ...
-# ---
-# kind: pipeline
-# type: kubernetes
-# name: build-and-publish-5
+steps:
+  - name: publish
+    image: public.ecr.aws/kanopy/buildctl-ecr
+    environment:
+      REPOSITORY: 795250896452.dkr.ecr.us-east-1.amazonaws.com
+      AWS_ACCESS_KEY_ID:
+        from_secret: ecr_access_key
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: ecr_secret_key
+    commands:
+    - repo_helper
+    - buildctl --addr tcp://buildkitd.dronev1.svc.cluster.local:1234 build  --output=type=image,name=795250896452.dkr.ecr.us-east-1.amazonaws.com/devops/evergreen:buildckit-build-$(date +"%s%s"),push=true --local context=. --local dockerfile=./build/ --frontend=dockerfile.v0 --opt target=production --opt build-arg:GOOS=linux --opt build-arg:GOARCH=amd64 --opt build-arg:GOVERSION=1.20.7
+    when:
+      event:
+        - push
+...
+---
+kind: pipeline
+type: kubernetes
+name: build-and-publish-5
 
-# trigger:
-#   event:
-#     - push
+trigger:
+  event:
+    - push
 
-# resources:
-#   requests:
-#     cpu: 100
-#     memory: 500MiB
+resources:
+  requests:
+    cpu: 100
+    memory: 500MiB
 
-# steps:
-#   - name: publish
-#     image: public.ecr.aws/kanopy/buildctl-ecr
-#     environment:
-#       REPOSITORY: 795250896452.dkr.ecr.us-east-1.amazonaws.com
-#       AWS_ACCESS_KEY_ID:
-#         from_secret: ecr_access_key
-#       AWS_SECRET_ACCESS_KEY:
-#         from_secret: ecr_secret_key
-#     commands:
-#     - repo_helper
-#     - buildctl --addr tcp://buildkitd.dronev1.svc.cluster.local:1234 build  --output=type=image,name=795250896452.dkr.ecr.us-east-1.amazonaws.com/devops/evergreen:buildckit-build-$(date +"%s%s"),push=true --local context=. --local dockerfile=./build/ --frontend=dockerfile.v0 --opt target=production --opt build-arg:GOOS=linux --opt build-arg:GOARCH=amd64 --opt build-arg:GOVERSION=1.20.7
-#     when:
-#       event:
-#         - push
-# ...
-# ---
-# kind: pipeline
-# type: kubernetes
-# name: build-and-publish-6
-
-# trigger:
+steps:
+  - name: publish
+    image: public.ecr.aws/kanopy/buildctl-ecr
+    environment:
+      REPOSITORY: 795250896452.dkr.ecr.us-east-1.amazonaws.com
+      AWS_ACCESS_KEY_ID:
+        from_secret: ecr_access_key
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: ecr_secret_key
+    commands:
+    - repo_helper
+    - buildctl --addr tcp://buildkitd.dronev1.svc.cluster.local:1234 build  --output=type=image,name=795250896452.dkr.ecr.us-east-1.amazonaws.com/devops/evergreen:buildckit-build-$(date +"%s%s"),push=true --local context=. --local dockerfile=./build/ --frontend=dockerfile.v0 --opt target=production --opt build-arg:GOOS=linux --opt build-arg:GOARCH=amd64 --opt build-arg:GOVERSION=1.20.7
+    when:
+      event:
+        - push
+...
+#---
+#kind: pipeline
+#type: kubernetes
+#name: build-and-publish-6
+#
+#trigger:
 #  event:
 #    - push
-
-# resources:
+#
+#resources:
 #  requests:
 #    cpu: 100
 #    memory: 500MiB
-
-# steps:
+#
+#steps:
 #  - name: publish
 #    image: public.ecr.aws/kanopy/buildctl-ecr
 #    environment:
@@ -179,22 +179,22 @@ steps:
 #    when:
 #      event:
 #        - push
-# ...
-# ---
-# kind: pipeline
-# type: kubernetes
-# name: build-and-publish-7
-
-# trigger:
+#...
+#---
+#kind: pipeline
+#type: kubernetes
+#name: build-and-publish-7
+#
+#trigger:
 #  event:
 #    - push
-
-# resources:
+#
+#resources:
 #  requests:
 #    cpu: 100
 #    memory: 500MiB
-
-# steps:
+#
+#steps:
 #  - name: publish
 #    image: public.ecr.aws/kanopy/buildctl-ecr
 #    environment:
