@@ -14,7 +14,7 @@ resources:
 
 steps:
   - name: publish
-    image: williamwalter173/kaniko-ecr:v1.18.0-test-amd64-v2
+    image: plugins/kaniko-ecr
     environment:
       GOMAXPROCS: 3
       GOMEMLIMIT: 10GiB
