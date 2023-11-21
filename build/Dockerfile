@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # Make a build env with everything we need
-FROM public.ecr.aws/debian/debian:bookworm as build
+FROM public.ecr.aws/docker/library/debian:bookworm as build
 
 ARG GIT_HASH
 ARG GOOS
@@ -47,7 +47,7 @@ CMD ["/bin/bash", "-c", "/build/build/start-local-evergreen.sh"]
 
 
 # Production is as slim as possible
-FROM public.ecr.aws/debian/debian:bookworm-slim as production
+FROM  public.ecr.aws/docker/library/debian:bookworm-slim as production
 #FROM scratch as production
 
 ARG GOOS
